@@ -11,7 +11,7 @@ import           Network.Stream
 
 spec :: Spec
 spec = do
-    around_ restartService $
+    around_ withService $
         describe "Integration tests" $ do
             it "returns 400 Bad Request upon an empty request" $ do
                 irr <- simpleHTTP $ postRequestWithBody
@@ -52,8 +52,8 @@ getRes :: Result a -> IO a
 getRes (Left err) = fail $ show err
 getRes (Right a) = pure a
 
-restartService :: IO () -> IO ()
-restartService func = do
+withService :: IO () -> IO ()
+withService func = do
     tid <- forkIO runPandocService
     threadDelay $ 100 * 1000 -- Wait for it to start up
     func

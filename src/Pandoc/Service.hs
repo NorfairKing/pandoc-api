@@ -10,6 +10,7 @@ import           Data.Aeson
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.ByteString.Lazy.Char8 as LB8
 import qualified Data.Map                   as M
+import           Data.Monoid
 import qualified Data.Text                  as T
 import           Network.Wai
 import           Network.Wai.Handler.Warp
@@ -31,9 +32,7 @@ pandocServer :: Server PandocAPI
 pandocServer = serveConvert
 
 serveConvert :: ConvertRequest -> Handler LB.ByteString
-serveConvert cr = do
-    pd <- getPandoc cr
-    makePdf pd
+serveConvert = getPandoc >=> makePdf
 
 makePdf :: Pandoc -> Handler LB.ByteString
 makePdf pd = do
@@ -43,27 +42,32 @@ makePdf pd = do
             { writerStandalone = True
             , writerTemplate = template
             }
-    eepdf <- liftIO $ makePDF "xelatex" writeLaTeX wOpts pd
+    eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
     case eepdf of
         Left err -> throwError $ err500 { errBody = err }
         Right bs -> pure bs
 
 getPandoc :: ConvertRequest -> Handler Pandoc
-getPandoc cr =
-    case convertFrom cr of
-        FromJson ->  case fromJSON $ convertContent cr of
-            Error err -> throwError $ err400 { errBody = "Invalid json input." }
-            Success pd -> return pd
-        FromMarkdown -> case convertContent cr of
-            String s -> do
-                let rOpts = def
-                        { readerStandalone = True
-                        }
-                case readMarkdown rOpts $ T.unpack s of
-                    Left pde -> throwError $ err400 { errBody = "Unable to read markdown." }
-                    Right pd -> return pd
-            _ -> throwError $ err400 { errBody = "Invalid md format in JSON (expecting just a String)." }
+getPandoc cr = ($ convertContent cr) $ case convertFrom cr of
+    FromJson -> getPandocFromJSON
+    FromMarkdown -> getPandocFromMarkdown
 
+getPandocFromJSON :: Value -> Handler Pandoc
+getPandocFromJSON c = case fromJSON c of
+    Error err -> throwError $ err400 { errBody = "Invalid json input: " <> LB8.pack err }
+    Success pd -> return pd
+
+getPandocFromMarkdown :: Value -> Handler Pandoc
+getPandocFromMarkdown c = case c of
+    String s -> do
+        let rOpts = def
+                { readerStandalone = True
+                }
+        case readMarkdown rOpts $ T.unpack s of
+            Left pde -> throwError $ err400 { errBody = "Unable to read markdown: " <> LB8.pack (show pde) }
+            Right pd -> return pd
+    _ -> throwError $ err400
+        { errBody = "Invalid md format in JSON (expecting just a String)." }
 
 type PandocAPI =
         "convert"
@@ -101,11 +105,4 @@ data ToFormat
 instance FromJSON ToFormat where
     parseJSON (String "pdf") = pure ToPdf
     parseJSON (String "epub") = pure ToEpub
-    parseJSON _ = mempty
-
-newtype ConvertedDocument
-    = ConvertedDocument String
-    deriving (Show, Eq)
-
-instance ToJSON ConvertedDocument where
-    toJSON (ConvertedDocument s) = toJSON s
+    parseJSON c = fail $ "Unknown 'to' format: " ++ show c
