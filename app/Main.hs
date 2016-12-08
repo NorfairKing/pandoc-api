@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import           Pandoc.Service
 
 main :: IO ()
-main = startApp
+main = runPandocService
