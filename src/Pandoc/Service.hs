@@ -9,15 +9,16 @@ import           Control.Monad.IO.Class
 import           Data.Aeson
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.ByteString.Lazy.Char8 as LB8
-import qualified Data.Map                   as M
 import           Data.Monoid
 import qualified Data.Text                  as T
 import           Network.Wai
 import           Network.Wai.Handler.Warp
 import           Servant                    hiding (Header)
 import           Text.Pandoc
-import           Text.Pandoc.Options
 import           Text.Pandoc.PDF
+
+import           Pandoc.Service.API
+import           Pandoc.Service.Types
 
 runPandocService :: IO ()
 runPandocService = run 8081 pandocApp
@@ -44,7 +45,7 @@ makePdf pd = do
             }
     eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
     case eepdf of
-        Left err -> throwError $ err500 { errBody = err }
+        Left err -> throwError $ err500 { errBody = "Unable to make PDF:\n" <> err }
         Right bs -> pure bs
 
 getPandoc :: ConvertRequest -> Handler Pandoc
@@ -69,40 +70,3 @@ getPandocFromMarkdown c = case c of
     _ -> throwError $ err400
         { errBody = "Invalid md format in JSON (expecting just a String)." }
 
-type PandocAPI =
-        "convert"
-    :> ReqBody '[JSON] ConvertRequest
-    :> Post '[OctetStream] LB.ByteString
-
-data ConvertRequest
-    = ConvertRequest
-    { convertFrom    :: FromFormat
-    , convertTo      :: ToFormat
-    , convertContent :: Value
-    } deriving (Show, Eq)
-
-instance FromJSON ConvertRequest where
-    parseJSON (Object o) = ConvertRequest
-        <$> o .: "from"
-        <*> o .: "to"
-        <*> o .: "content"
-
-data FromFormat
-    = FromJson
-    | FromMarkdown
-    deriving (Show, Eq)
-
-instance FromJSON FromFormat where
-    parseJSON (String "json") = pure FromJson
-    parseJSON (String "markdown") = pure FromMarkdown
-    parseJSON c = fail $ "Unknown 'from' format: " ++ show c
-
-data ToFormat
-    = ToPdf
-    | ToEpub
-    deriving (Show, Eq)
-
-instance FromJSON ToFormat where
-    parseJSON (String "pdf") = pure ToPdf
-    parseJSON (String "epub") = pure ToEpub
-    parseJSON c = fail $ "Unknown 'to' format: " ++ show c
