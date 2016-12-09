@@ -29,7 +29,7 @@ spec = do
                 resp <- getRes irr
                 rspCode resp `shouldBe` (4, 0, 0)
 
-            it "returns 200 upon a valid input markdown" $ do
+            it "returns 200 upon a valid input markdown when converting to pdf" $ do
                 let content = "\"# Title\nContent\n\""
                 irr <- simpleHTTP $ postRequestWithBody
                     "http://127.0.0.1:8081/convert"
@@ -38,7 +38,7 @@ spec = do
                 resp <- getRes irr
                 rspCode resp `shouldBe` (2, 0, 0)
 
-            it "returns 200 upon a valid input json" $ do
+            it "returns 200 upon a valid input json when converting to pdf" $ do
                 let content = "[{\"unMeta\":{}},[{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}]]"
                 irr <- simpleHTTP $ postRequestWithBody
                     "http://127.0.0.1:8081/convert"
@@ -47,6 +47,23 @@ spec = do
                 resp <- getRes irr
                 rspCode resp `shouldBe` (2, 0, 0)
 
+            it "returns 200 upon a valid input markdown when converting to epub" $ do
+                let content = "\"# Title\nContent\n\""
+                irr <- simpleHTTP $ postRequestWithBody
+                    "http://127.0.0.1:8081/convert"
+                    "application/json" $
+                    "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
+                resp <- getRes irr
+                rspCode resp `shouldBe` (2, 0, 0)
+
+            it "returns 200 upon a valid input json when converting to epub" $ do
+                let content = "[{\"unMeta\":{}},[{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}]]"
+                irr <- simpleHTTP $ postRequestWithBody
+                    "http://127.0.0.1:8081/convert"
+                    "application/json" $
+                    "{ \"from\": \"json\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
+                resp <- getRes irr
+                rspCode resp `shouldBe` (2, 0, 0)
 
 getRes :: Result a -> IO a
 getRes (Left err) = fail $ show err

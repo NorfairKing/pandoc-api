@@ -3,7 +3,6 @@
 {-# LANGUAGE TypeOperators     #-}
 module Pandoc.Service where
 
-import           Control.Monad
 import           Control.Monad.IO.Class
 
 import           Data.Aeson
@@ -33,20 +32,7 @@ pandocServer :: Server PandocAPI
 pandocServer = serveConvert
 
 serveConvert :: ConvertRequest -> Handler LB.ByteString
-serveConvert = getPandoc >=> makePdf
-
-makePdf :: Pandoc -> Handler LB.ByteString
-makePdf pd = do
-    Right template <- liftIO $ getDefaultTemplate Nothing "latex"
-
-    let wOpts = def
-            { writerStandalone = True
-            , writerTemplate = template
-            }
-    eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
-    case eepdf of
-        Left err -> throwError $ err500 { errBody = "Unable to make PDF:\n" <> err }
-        Right bs -> pure bs
+serveConvert cr = getPandoc cr >>= makeResult cr
 
 getPandoc :: ConvertRequest -> Handler Pandoc
 getPandoc cr = ($ convertContent cr) $ case convertFrom cr of
@@ -69,4 +55,32 @@ getPandocFromMarkdown c = case c of
             Right pd -> return pd
     _ -> throwError $ err400
         { errBody = "Invalid md format in JSON (expecting just a String)." }
+
+
+makeResult :: ConvertRequest -> Pandoc -> Handler LB.ByteString
+makeResult cr = case convertTo cr of
+    ToPdf -> makePdf
+    ToEpub -> makeEpub
+
+makePdf :: Pandoc -> Handler LB.ByteString
+makePdf pd = do
+    Right template <- liftIO $ getDefaultTemplate Nothing "latex"
+
+    let wOpts = def
+            { writerStandalone = True
+            , writerTemplate = template
+            }
+    eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
+    case eepdf of
+        Left err -> throwError $ err500 { errBody = "Unable to make PDF:\n" <> err }
+        Right bs -> pure bs
+
+makeEpub :: Pandoc -> Handler LB.ByteString
+makeEpub pd = do
+    Right template <- liftIO $ getDefaultTemplate Nothing "epub"
+    let wOpts = def
+            { writerStandalone = True
+            , writerTemplate = template
+            }
+    liftIO $ writeEPUB wOpts pd
 
