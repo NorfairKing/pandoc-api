@@ -1,9 +1,7 @@
 module Pandoc.ServiceSpec where
 
 import           Control.Concurrent
-
 import           Pandoc.Service
-
 import           Test.Hspec
 
 import           Network.HTTP
@@ -62,6 +60,15 @@ spec = do
                     "http://127.0.0.1:8081/convert"
                     "application/json" $
                     "{ \"from\": \"json\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
+                resp <- getRes irr
+                rspCode resp `shouldBe` (2, 0, 0)
+
+            it "returns 200 upon a valid input markdown including an external image when converting to pdf" $ do
+                let content = "\"# Title\n![Image text](http://placehold.it/10x10)\n\""
+                irr <- simpleHTTP $ postRequestWithBody
+                    "http://127.0.0.1:8081/convert"
+                    "application/json" $
+                    "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
                 resp <- getRes irr
                 rspCode resp `shouldBe` (2, 0, 0)
 
