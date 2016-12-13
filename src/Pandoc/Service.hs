@@ -56,29 +56,29 @@ getPandocFromMarkdown rOpts c = case c of
 
 
 makeResult :: ConvertRequest -> Pandoc -> Handler LB.ByteString
-makeResult cr = case convertTo cr of
-    ToPdf -> makePdf
-    ToEpub -> makeEpub
+makeResult cr pd =
+    let wOpts = (fromMaybe myDefaultWriterOptions $ writerOptions =<< convertOptions cr)
+        func = case convertTo cr of
+            ToPdf -> makePdf
+            ToEpub -> makeEpub
+    in func wOpts pd
 
-makePdf :: Pandoc -> Handler LB.ByteString
-makePdf pd = do
+makePdf :: WriterOptions -> Pandoc -> Handler LB.ByteString
+makePdf opts pd = do
     Right template <- liftIO $ getDefaultTemplate Nothing "latex"
-
-    let wOpts = def
-            { writerStandalone = True
-            , writerTemplate = template
+    let wOpts = opts
+            { writerTemplate = template
             }
     eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
     case eepdf of
         Left err -> throwError $ err500 { errBody = "Unable to make PDF:\n" <> err }
         Right bs -> pure bs
 
-makeEpub :: Pandoc -> Handler LB.ByteString
-makeEpub pd = do
+makeEpub :: WriterOptions -> Pandoc -> Handler LB.ByteString
+makeEpub opts pd = do
     Right template <- liftIO $ getDefaultTemplate Nothing "epub"
-    let wOpts = def
-            { writerStandalone = True
-            , writerTemplate = template
+    let wOpts = opts
+            { writerTemplate = template
             }
     liftIO $ writeEPUB wOpts pd
 
