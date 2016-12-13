@@ -4,6 +4,7 @@
 module Pandoc.Service where
 
 import           Control.Monad.IO.Class
+import           Data.Maybe
 
 import           Data.Aeson
 import qualified Data.ByteString.Lazy       as LB
@@ -38,21 +39,18 @@ getPandoc :: ConvertRequest -> Handler Pandoc
 getPandoc cr = ($ convertContent cr) $ case convertFrom cr of
     FromJson -> getPandocFromJSON
     FromMarkdown -> getPandocFromMarkdown
+        (fromMaybe myDefaultReaderOptions $ readerOptions =<< convertOptions cr)
 
 getPandocFromJSON :: Value -> Handler Pandoc
 getPandocFromJSON c = case fromJSON c of
     Error err -> throwError $ err400 { errBody = "Invalid json input: " <> LB8.pack err }
     Success pd -> return pd
 
-getPandocFromMarkdown :: Value -> Handler Pandoc
-getPandocFromMarkdown c = case c of
-    String s -> do
-        let rOpts = def
-                { readerStandalone = True
-                }
-        case readMarkdown rOpts $ T.unpack s of
-            Left pde -> throwError $ err400 { errBody = "Unable to read markdown: " <> LB8.pack (show pde) }
-            Right pd -> return pd
+getPandocFromMarkdown :: ReaderOptions -> Value -> Handler Pandoc
+getPandocFromMarkdown rOpts c = case c of
+    String s -> case readMarkdown rOpts $ T.unpack s of
+        Left pde -> throwError $ err400 { errBody = "Unable to read markdown: " <> LB8.pack (show pde) }
+        Right pd -> return pd
     _ -> throwError $ err400
         { errBody = "Invalid md format in JSON (expecting just a String)." }
 

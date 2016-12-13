@@ -3,6 +3,7 @@
 
 module Pandoc.Service.Types where
 
+import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Text
@@ -58,28 +59,27 @@ instance FromJSON ConvertOptions where
     parseJSON (Object o) = do
         rv <- o .:? "reader"
         ros <- case rv of
-            Just (Object ro) -> Just <$> defaultDeltaReaderOptinos ro
+            Just (Object ro) -> Just <$> defaultDeltaReaderOptions ro
             Nothing -> pure Nothing
             _ -> fail "ReaderOptions should be specified in an 'object'."
         pure $ ConvertOptions ros
     parseJSON _ = fail $ "ConvertOptions should be specified in an 'object'."
 
-
-defaultDeltaReaderOptinos :: Object -> Parser ReaderOptions
-defaultDeltaReaderOptinos o =
+defaultDeltaReaderOptions :: Object -> Parser ReaderOptions
+defaultDeltaReaderOptions o = myDefaultReaderOptions &
     -- TODO add readerExtensions
-        go "smart" readerSmartL def
-    >>= go "standalone" readerStandaloneL
-    >>= go "parseRaw" readerParseRawL
-    >>= go "columns" readerColumnsL
-    >>= go "tabStop" readerTabStopL
-    >>= go "oldDashes" readerOldDashesL
-    >>= go "applyMacros" readerApplyMacrosL
-    >>= go "indentedCodeClasses" readerIndentedCodeClassesL
-    >>= go "defaultImageExtension" readerDefaultImageExtensionL
-    >>= go "trace" readerTraceL
+   (    go "smart" readerSmartL
+    >=> go "standalone" readerStandaloneL
+    >=> go "parseRaw" readerParseRawL
+    >=> go "columns" readerColumnsL
+    >=> go "tabStop" readerTabStopL
+    >=> go "oldDashes" readerOldDashesL
+    >=> go "applyMacros" readerApplyMacrosL
+    >=> go "indentedCodeClasses" readerIndentedCodeClassesL
+    >=> go "defaultImageExtension" readerDefaultImageExtensionL
+    >=> go "trace" readerTraceL
     -- TODO add readerTrackChanges
-    >>= go "fileScope" readerFileScopeL
+    >=> go "fileScope" readerFileScopeL)
   where
     go :: FromJSON a => Text -> Lens' ReaderOptions a -> ReaderOptions -> Parser ReaderOptions
     go  label labelL  opts = do
@@ -87,3 +87,6 @@ defaultDeltaReaderOptinos o =
         pure $ case mv of
             Nothing -> opts
             Just b -> opts & labelL .~ b
+
+myDefaultReaderOptions :: ReaderOptions
+myDefaultReaderOptions = def { readerStandalone = True }
