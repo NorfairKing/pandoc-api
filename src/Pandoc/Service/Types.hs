@@ -92,48 +92,48 @@ myDefaultReaderOptions = def { readerStandalone = True }
 
 defaultDeltaWriterOptions :: Object -> Parser WriterOptions
 defaultDeltaWriterOptions o = myDefaultWriterOptions &
-   (    editWhileParsing o "Template" writerTemplateL
+   (    editWhileParsing o "template" writerTemplateL
     -- TODO add writerVariables
-    >=> editWhileParsing o "TabStop" writerTabStopL
-    >=> editWhileParsing o "TableOfContents" writerTableOfContentsL
+    >=> editWhileParsing o "tabStop" writerTabStopL
+    >=> editWhileParsing o "tableOfContents" writerTableOfContentsL
     -- TODO add writerSlideVariant
-    >=> editWhileParsing o "Incremental" writerIncrementalL
+    >=> editWhileParsing o "incremental" writerIncrementalL
     -- TODO add writerHTMLMathMethod
-    >=> editWhileParsing o "IgnoreNotes" writerIgnoreNotesL
-    >=> editWhileParsing o "NumberSections" writerNumberSectionsL
-    >=> editWhileParsing o "NumberOffset" writerNumberOffsetL
-    >=> editWhileParsing o "SectionDivs" writerSectionDivsL
+    >=> editWhileParsing o "ignoreNotes" writerIgnoreNotesL
+    >=> editWhileParsing o "numberSections" writerNumberSectionsL
+    >=> editWhileParsing o "numberOffset" writerNumberOffsetL
+    >=> editWhileParsing o "sectionDivs" writerSectionDivsL
     -- TODO add writerExtensions
-    >=> editWhileParsing o "ReferenceLinks" writerReferenceLinksL
-    >=> editWhileParsing o "Dpi" writerDpiL
+    >=> editWhileParsing o "referenceLinks" writerReferenceLinksL
+    >=> editWhileParsing o "dpi" writerDpiL
     -- TODO add writerWrapTextL
-    >=> editWhileParsing o "Columns" writerColumnsL
+    >=> editWhileParsing o "columns" writerColumnsL
     -- TODO add writerEmailObfuscation
-    >=> editWhileParsing o "IdentifierPrefix" writerIdentifierPrefixL
-    >=> editWhileParsing o "SourceURL" writerSourceURLL
-    >=> editWhileParsing o "UserDataDir" writerUserDataDirL
+    >=> editWhileParsing o "identifierPrefix" writerIdentifierPrefixL
+    >=> editWhileParsing o "sourceURL" writerSourceURLL
+    >=> editWhileParsing o "userDataDir" writerUserDataDirL
     -- TODO add writerCiteMethod
-    >=> editWhileParsing o "Docbook5" writerDocbook5L
-    >=> editWhileParsing o "Html5" writerHtml5L
-    >=> editWhileParsing o "HtmlQTags" writerHtmlQTagsL
-    >=> editWhileParsing o "Beamer" writerBeamerL
-    >=> editWhileParsing o "SlideLevel" writerSlideLevelL
+    >=> editWhileParsing o "docbook5" writerDocbook5L
+    >=> editWhileParsing o "html5" writerHtml5L
+    >=> editWhileParsing o "htmlQTags" writerHtmlQTagsL
+    >=> editWhileParsing o "beamer" writerBeamerL
+    >=> editWhileParsing o "slideLevel" writerSlideLevelL
     -- TODO add writerTopLevelDivision
-    >=> editWhileParsing o "Listings" writerListingsL
-    >=> editWhileParsing o "Highlight" writerHighlightL
+    >=> editWhileParsing o "listings" writerListingsL
+    >=> editWhileParsing o "highlight" writerHighlightL
     -- TODO add writerHighlightStyle
-    >=> editWhileParsing o "SetextHeaders" writerSetextHeadersL
-    >=> editWhileParsing o "TeXLigatures" writerTeXLigaturesL
+    >=> editWhileParsing o "setextHeaders" writerSetextHeadersL
+    >=> editWhileParsing o "teXLigatures" writerTeXLigaturesL
     -- TODO add writerEpubVersion
-    >=> editWhileParsing o "EpubMetadata" writerEpubMetadataL
-    >=> editWhileParsing o "EpubStylesheet" writerEpubStylesheetL
+    >=> editWhileParsing o "epubMetadata" writerEpubMetadataL
+    >=> editWhileParsing o "epubStylesheet" writerEpubStylesheetL
     -- TODO add writerEpubFonts
-    >=> editWhileParsing o "EpubChapterLevel" writerEpubChapterLevelL
-    >=> editWhileParsing o "TOCDepth" writerTOCDepthL
-    >=> editWhileParsing o "ReferenceODT" writerReferenceODTL
-    >=> editWhileParsing o "ReferenceDocx" writerReferenceDocxL
+    >=> editWhileParsing o "epubChapterLevel" writerEpubChapterLevelL
+    >=> editWhileParsing o "tOCDepth" writerTOCDepthL
+    >=> editWhileParsing o "referenceODT" writerReferenceODTL
+    >=> editWhileParsing o "referenceDocx" writerReferenceDocxL
     -- TODO add writerMediaBag
-    >=> editWhileParsing o "Verbose" writerVerboseL)
+    >=> editWhileParsing o "verbose" writerVerboseL)
     -- TODO add writerLaTeXArgs
     -- TODO add writerReferenceLocationL
 

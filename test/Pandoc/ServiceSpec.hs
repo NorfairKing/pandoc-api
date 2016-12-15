@@ -29,48 +29,49 @@ spec = do
 
             it "returns 200 upon a valid input markdown when converting to pdf" $ do
                 let content = "\"# Title\nContent\n\""
-                irr <- simpleHTTP $ postRequestWithBody
-                    "http://127.0.0.1:8081/convert"
-                    "application/json" $
-                    "{ \"from\": \"markdown\", \"to\": \"pdf\", \"content\": " ++ content ++ "}"
-                resp <- getRes irr
-                rspCode resp `shouldBe` (2, 0, 0)
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input json when converting to pdf" $ do
                 let content = "[{\"unMeta\":{}},[{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}]]"
-                irr <- simpleHTTP $ postRequestWithBody
-                    "http://127.0.0.1:8081/convert"
-                    "application/json" $
-                    "{ \"from\": \"json\", \"to\": \"pdf\", \"content\": " ++ content ++ "}"
-                resp <- getRes irr
-                rspCode resp `shouldBe` (2, 0, 0)
+                shouldJustWork $ "{ \"from\": \"json\", \"to\": \"pdf\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input markdown when converting to epub" $ do
                 let content = "\"# Title\nContent\n\""
-                irr <- simpleHTTP $ postRequestWithBody
-                    "http://127.0.0.1:8081/convert"
-                    "application/json" $
-                    "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
-                resp <- getRes irr
-                rspCode resp `shouldBe` (2, 0, 0)
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input json when converting to epub" $ do
                 let content = "[{\"unMeta\":{}},[{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}]]"
-                irr <- simpleHTTP $ postRequestWithBody
-                    "http://127.0.0.1:8081/convert"
-                    "application/json" $
-                    "{ \"from\": \"json\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
-                resp <- getRes irr
-                rspCode resp `shouldBe` (2, 0, 0)
+                shouldJustWork $ "{ \"from\": \"json\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input markdown including an external image when converting to pdf" $ do
                 let content = "\"# Title\n![Image text](http://placehold.it/10x10)\n\""
-                irr <- simpleHTTP $ postRequestWithBody
-                    "http://127.0.0.1:8081/convert"
-                    "application/json" $
-                    "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
-                resp <- getRes irr
-                rspCode resp `shouldBe` (2, 0, 0)
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
+
+            it "returns 200 upon a valid input markdown when converting to pdf with empty options" $ do
+                let content = "\"# Title\nContent\n\""
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": {}, \"content\": " ++ content ++ "}"
+
+            it "returns 200 upon a valid input markdown when converting to pdf with empty reader options" $ do
+                let content = "\"# Title\nContent\n\""
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"reader\": {} }, \"content\": " ++ content ++ "}"
+
+            it "returns 200 upon a valid input markdown when converting to pdf with empty writer options" $ do
+                let content = "\"# Title\nContent\n\""
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": {} }, \"content\": " ++ content ++ "}"
+
+            it "returns 200 upon a valid input markdown when converting to pdf with this example writer option" $ do
+                let content = "\"# Title\nContent\n\""
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": { \"dpi\": 500 } }, \"content\": " ++ content ++ "}"
+
+shouldJustWork request = do
+    irr <- simpleHTTP $ postRequestWithBody
+        "http://127.0.0.1:8081/convert"
+        "application/json"
+        request
+    resp <- getRes irr
+    case rspCode resp of
+        (2, 0, 0) -> pure ()
+        _ -> expectationFailure $ show (resp, rspBody resp)
 
 getRes :: Result a -> IO a
 getRes (Left err) = fail $ show err
