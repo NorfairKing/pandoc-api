@@ -4,6 +4,7 @@
 module Pandoc.Service where
 
 import           Control.Monad.IO.Class
+import           Data.Maybe
 
 import           Data.Aeson
 import qualified Data.ByteString.Lazy       as LB
@@ -38,49 +39,46 @@ getPandoc :: ConvertRequest -> Handler Pandoc
 getPandoc cr = ($ convertContent cr) $ case convertFrom cr of
     FromJson -> getPandocFromJSON
     FromMarkdown -> getPandocFromMarkdown
+        (fromMaybe myDefaultReaderOptions $ readerOptions =<< convertOptions cr)
 
 getPandocFromJSON :: Value -> Handler Pandoc
 getPandocFromJSON c = case fromJSON c of
     Error err -> throwError $ err400 { errBody = "Invalid json input: " <> LB8.pack err }
     Success pd -> return pd
 
-getPandocFromMarkdown :: Value -> Handler Pandoc
-getPandocFromMarkdown c = case c of
-    String s -> do
-        let rOpts = def
-                { readerStandalone = True
-                }
-        case readMarkdown rOpts $ T.unpack s of
-            Left pde -> throwError $ err400 { errBody = "Unable to read markdown: " <> LB8.pack (show pde) }
-            Right pd -> return pd
+getPandocFromMarkdown :: ReaderOptions -> Value -> Handler Pandoc
+getPandocFromMarkdown rOpts c = case c of
+    String s -> case readMarkdown rOpts $ T.unpack s of
+        Left pde -> throwError $ err400 { errBody = "Unable to read markdown: " <> LB8.pack (show pde) }
+        Right pd -> return pd
     _ -> throwError $ err400
         { errBody = "Invalid md format in JSON (expecting just a String)." }
 
 
 makeResult :: ConvertRequest -> Pandoc -> Handler LB.ByteString
-makeResult cr = case convertTo cr of
-    ToPdf -> makePdf
-    ToEpub -> makeEpub
+makeResult cr pd =
+    let wOpts = (fromMaybe myDefaultWriterOptions $ writerOptions =<< convertOptions cr)
+        func = case convertTo cr of
+            ToPdf -> makePdf
+            ToEpub -> makeEpub
+    in func wOpts pd
 
-makePdf :: Pandoc -> Handler LB.ByteString
-makePdf pd = do
+makePdf :: WriterOptions -> Pandoc -> Handler LB.ByteString
+makePdf opts pd = do
     Right template <- liftIO $ getDefaultTemplate Nothing "latex"
-
-    let wOpts = def
-            { writerStandalone = True
-            , writerTemplate = template
+    let wOpts = opts
+            { writerTemplate = template
             }
     eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
     case eepdf of
         Left err -> throwError $ err500 { errBody = "Unable to make PDF:\n" <> err }
         Right bs -> pure bs
 
-makeEpub :: Pandoc -> Handler LB.ByteString
-makeEpub pd = do
+makeEpub :: WriterOptions -> Pandoc -> Handler LB.ByteString
+makeEpub opts pd = do
     Right template <- liftIO $ getDefaultTemplate Nothing "epub"
-    let wOpts = def
-            { writerStandalone = True
-            , writerTemplate = template
+    let wOpts = opts
+            { writerTemplate = template
             }
     liftIO $ writeEPUB wOpts pd
 
