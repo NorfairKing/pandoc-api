@@ -63,6 +63,7 @@ spec = do
                 let content = "\"# Title\nContent\n\""
                 shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": { \"dpi\": 500 } }, \"content\": " ++ content ++ "}"
 
+shouldJustWork :: String -> IO ()
 shouldJustWork request = do
     irr <- simpleHTTP $ postRequestWithBody
         "http://127.0.0.1:8081/convert"
@@ -71,11 +72,11 @@ shouldJustWork request = do
     resp <- getRes irr
     case rspCode resp of
         (2, 0, 0) -> pure ()
-        _ -> expectationFailure $ show (resp, rspBody resp)
+        _         -> expectationFailure $ show (resp, rspBody resp)
 
 getRes :: Result a -> IO a
 getRes (Left err) = fail $ show err
-getRes (Right a) = pure a
+getRes (Right a)  = pure a
 
 withService :: IO () -> IO ()
 withService func = do

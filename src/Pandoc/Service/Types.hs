@@ -36,9 +36,9 @@ data FromFormat
     deriving (Show, Eq)
 
 instance FromJSON FromFormat where
-    parseJSON (String "json") = pure FromJson
+    parseJSON (String "json")     = pure FromJson
     parseJSON (String "markdown") = pure FromMarkdown
-    parseJSON c = fail $ "Unknown 'from' format: " ++ show c
+    parseJSON c                   = fail $ "Unknown 'from' format: " ++ show c
 
 data ToFormat
     = ToPdf
@@ -46,9 +46,9 @@ data ToFormat
     deriving (Show, Eq)
 
 instance FromJSON ToFormat where
-    parseJSON (String "pdf") = pure ToPdf
+    parseJSON (String "pdf")  = pure ToPdf
     parseJSON (String "epub") = pure ToEpub
-    parseJSON c = fail $ "Unknown 'to' format: " ++ show c
+    parseJSON c               = fail $ "Unknown 'to' format: " ++ show c
 
 data ConvertOptions
     = ConvertOptions
@@ -133,8 +133,8 @@ defaultDeltaWriterOptions o = myDefaultWriterOptions &
     >=> editWhileParsing o "referenceODT" writerReferenceODTL
     >=> editWhileParsing o "referenceDocx" writerReferenceDocxL
     -- TODO add writerMediaBag
-    >=> editWhileParsing o "verbose" writerVerboseL)
-    -- TODO add writerLaTeXArgs
+    >=> editWhileParsing o "verbose" writerVerboseL
+    >=> editWhileParsing o "latexArgs" writerLaTeXArgsL)
     -- TODO add writerReferenceLocationL
 
 myDefaultWriterOptions :: WriterOptions
@@ -145,5 +145,5 @@ editWhileParsing o label labelL opts = do
     mv <- o .:? label
     pure $ case mv of
         Nothing -> opts
-        Just b -> opts & labelL .~ b
+        Just b  -> opts & labelL .~ b
 
