@@ -1,6 +1,7 @@
 module Pandoc.ServiceSpec where
 
 import           Control.Concurrent
+import           Control.Monad
 import           Pandoc.Service
 import           Test.Hspec
 
@@ -32,7 +33,7 @@ spec = do
                 shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input json when converting to pdf" $ do
-                let content = "[{\"unMeta\":{}},[{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}]]"
+                let content = "{\"meta\":{}, \"blocks\": [{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}], \"pandoc-api-version\":[1,17,0,4] }"
                 shouldJustWork $ "{ \"from\": \"json\", \"to\": \"pdf\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input markdown when converting to epub" $ do
@@ -40,7 +41,7 @@ spec = do
                 shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input json when converting to epub" $ do
-                let content = "[{\"unMeta\":{}},[{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}]]"
+                let content = "{\"meta\":{}, \"blocks\": [{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}], \"pandoc-api-version\":[1,17,0,4] }"
                 shouldJustWork $ "{ \"from\": \"json\", \"to\": \"epub\", \"content\": " ++ content ++ "}"
 
             it "returns 200 upon a valid input markdown including an external image when converting to pdf" $ do
@@ -84,7 +85,14 @@ getRes (Right a)  = pure a
 
 withService :: IO () -> IO ()
 withService func = do
-    tid <- forkIO runPandocService
+    (tid, var) <- forkThing runPandocService
     threadDelay $ 100 * 1000 -- Wait for it to start up
     func
     killThread tid
+    void $ takeMVar var
+
+forkThing :: IO () -> IO (ThreadId, MVar ())
+forkThing proc = do
+    handle <- newEmptyMVar
+    tid <- forkFinally proc (\_ -> putMVar handle ())
+    return (tid, handle)

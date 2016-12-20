@@ -59,7 +59,7 @@ makeResult :: ConvertRequest -> Pandoc -> Handler LB.ByteString
 makeResult cr pd =
     let wOpts = (fromMaybe myDefaultWriterOptions $ writerOptions =<< convertOptions cr)
         func = case convertTo cr of
-            ToPdf -> makePdf
+            ToPdf  -> makePdf
             ToEpub -> makeEpub
     in func wOpts pd
 
@@ -67,7 +67,7 @@ makePdf :: WriterOptions -> Pandoc -> Handler LB.ByteString
 makePdf opts pd = do
     Right template <- liftIO $ getDefaultTemplate Nothing "latex"
     let wOpts = opts
-            { writerTemplate = template
+            { writerTemplate = Just template
             }
     eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
     case eepdf of
@@ -78,7 +78,7 @@ makeEpub :: WriterOptions -> Pandoc -> Handler LB.ByteString
 makeEpub opts pd = do
     Right template <- liftIO $ getDefaultTemplate Nothing "epub"
     let wOpts = opts
-            { writerTemplate = template
+            { writerTemplate = Just template
             }
     liftIO $ writeEPUB wOpts pd
 

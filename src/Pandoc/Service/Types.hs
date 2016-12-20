@@ -88,7 +88,7 @@ defaultDeltaReaderOptions o = myDefaultReaderOptions &
     >=> editWhileParsing o "fileScope" readerFileScopeL)
 
 myDefaultReaderOptions :: ReaderOptions
-myDefaultReaderOptions = def { readerStandalone = True }
+myDefaultReaderOptions = def
 
 defaultDeltaWriterOptions :: Object -> Parser WriterOptions
 defaultDeltaWriterOptions o = myDefaultWriterOptions &
@@ -138,7 +138,7 @@ defaultDeltaWriterOptions o = myDefaultWriterOptions &
     -- TODO add writerReferenceLocationL
 
 myDefaultWriterOptions :: WriterOptions
-myDefaultWriterOptions = def { writerStandalone = True }
+myDefaultWriterOptions = def
 
 editWhileParsing :: FromJSON a => Object -> Text -> Lens' o a -> o -> Parser o
 editWhileParsing o label labelL opts = do
