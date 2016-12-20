@@ -65,10 +65,7 @@ makeResult cr pd =
 
 makePdf :: WriterOptions -> Pandoc -> Handler LB.ByteString
 makePdf opts pd = do
-    Right template <- liftIO $ getDefaultTemplate Nothing "latex"
-    let wOpts = opts
-            { writerTemplate = Just template
-            }
+    wOpts <- figureOutTemplateFor opts "latex"
     eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
     case eepdf of
         Left err -> throwError $ err500 { errBody = "Unable to make PDF:\n" <> err }
@@ -76,9 +73,26 @@ makePdf opts pd = do
 
 makeEpub :: WriterOptions -> Pandoc -> Handler LB.ByteString
 makeEpub opts pd = do
-    Right template <- liftIO $ getDefaultTemplate Nothing "epub"
-    let wOpts = opts
-            { writerTemplate = Just template
-            }
+    wOpts <- figureOutTemplateFor opts "epub"
     liftIO $ writeEPUB wOpts pd
 
+
+figureOutTemplateFor :: WriterOptions -> String -> Handler WriterOptions
+figureOutTemplateFor wopts kind = do
+    mtempl <- case writerTemplate wopts of
+        Nothing -> do
+            eet <- liftIO $ getDefaultTemplate Nothing kind
+            case eet of
+                Left err -> throwError $ err500
+                    { errBody = mconcat
+                        [ "Unable to find defaulte template for: "
+                        , LB8.pack kind
+                        , "\n" <> LB8.pack (show err)
+                        ]
+                    }
+                Right t -> pure $ Just t
+        mt -> pure mt
+
+    pure wopts
+        { writerTemplate = mtempl
+        }
