@@ -63,6 +63,10 @@ spec = do
                 let content = "\"# Title\nContent\n\""
                 shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": { \"dpi\": 500 } }, \"content\": " ++ content ++ "}"
 
+            it "returns 200 upon a valid input markdown when converting to pdf with writer variables" $ do
+                let content = "\"# Title\nContent\n\""
+                shouldJustWork $ "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": { \"variables\": [ [ \"toc\", \"true\" ] ] } }, \"content\": " ++ content ++ "}"
+
 shouldJustWork :: String -> IO ()
 shouldJustWork request = do
     irr <- simpleHTTP $ postRequestWithBody

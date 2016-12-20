@@ -93,7 +93,7 @@ myDefaultReaderOptions = def { readerStandalone = True }
 defaultDeltaWriterOptions :: Object -> Parser WriterOptions
 defaultDeltaWriterOptions o = myDefaultWriterOptions &
    (    editWhileParsing o "template" writerTemplateL
-    -- TODO add writerVariables
+    >=> editWhileParsing o "variables" writerVariablesL
     >=> editWhileParsing o "tabStop" writerTabStopL
     >=> editWhileParsing o "tableOfContents" writerTableOfContentsL
     -- TODO add writerSlideVariant
