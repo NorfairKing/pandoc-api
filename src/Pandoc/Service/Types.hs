@@ -49,25 +49,35 @@ instance FromJSON ToFormat where
 
 data ConvertOptions = ConvertOptions
     { readerOptions :: Maybe ReaderOptions
-    , writerOptions :: Maybe WriterOptions
+    , writerOptions :: Maybe ServiceWriterOptions
     } deriving (Show)
 
 instance FromJSON ConvertOptions where
     parseJSON (Object o) = do
         rv <- o .:? "reader"
-        ros <-
+        mros <-
             case rv of
                 Just (Object ro) -> Just <$> defaultDeltaReaderOptions ro
                 Nothing -> pure Nothing
                 _ -> fail "ReaderOptions should be specified in an 'Object'."
-        wv <- o .:? "writer"
-        wos <-
-            case wv of
-                Just (Object wo) -> Just <$> defaultDeltaWriterOptions wo
-                Nothing -> pure Nothing
-                _ -> fail "WriterOptions should be specified in an 'Object'."
-        pure $ ConvertOptions ros wos
-    parseJSON _ = fail $ "ConvertOptions should be specified in an 'object'."
+        wos <- o .:? "writer"
+        pure $ ConvertOptions mros wos
+    parseJSON _ = fail $ "ConvertOptions should be specified in an 'Object'."
+
+data ServiceWriterOptions = ServiceWriterOptions
+    { pandocWriterOptions :: WriterOptions
+    , namedTemplate :: Maybe String
+    } deriving (Show)
+
+instance FromJSON ServiceWriterOptions where
+    parseJSON (Object o) = do
+        wos <- defaultDeltaWriterOptions o
+        mnt <- o .:? "named-template"
+        pure
+            ServiceWriterOptions
+            {pandocWriterOptions = wos, namedTemplate = mnt}
+    parseJSON _ =
+        fail $ "ServiceWriterOptions should be specified in an 'Object'."
 
 defaultDeltaReaderOptions :: Object -> Parser ReaderOptions
 defaultDeltaReaderOptions o =
@@ -151,6 +161,11 @@ defaultDeltaWriterOptions o =
 
 myDefaultWriterOptions :: WriterOptions
 myDefaultWriterOptions = def
+
+myDefaultServiceWriterOptions :: ServiceWriterOptions
+myDefaultServiceWriterOptions =
+    ServiceWriterOptions
+    {pandocWriterOptions = myDefaultWriterOptions, namedTemplate = Nothing}
 
 editWhileParsing
     :: FromJSON a

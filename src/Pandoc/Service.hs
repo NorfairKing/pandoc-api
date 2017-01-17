@@ -5,8 +5,10 @@
 module Pandoc.Service where
 
 import Control.Monad.IO.Class
+import Data.List (find)
 import Data.Maybe
 
+import Control.Exception (catch, throwIO)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Lazy.Char8 as LB8
@@ -15,6 +17,9 @@ import qualified Data.Text as T
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Servant hiding (Header)
+import System.Directory
+import System.FilePath
+import System.IO.Error (isDoesNotExistError)
 import Text.Pandoc
 import Text.Pandoc.PDF
 
@@ -74,7 +79,7 @@ getPandocFromMarkdown rOpts c =
 makeResult :: ConvertRequest -> Pandoc -> Handler LB.ByteString
 makeResult cr pd =
     let wOpts =
-            (fromMaybe myDefaultWriterOptions $
+            (fromMaybe myDefaultServiceWriterOptions $
              writerOptions =<< convertOptions cr)
         func =
             case convertTo cr of
@@ -82,7 +87,7 @@ makeResult cr pd =
                 ToEpub -> makeEpub
     in func wOpts pd
 
-makePdf :: WriterOptions -> Pandoc -> Handler LB.ByteString
+makePdf :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
 makePdf opts pd = do
     wOpts <- figureOutTemplateFor opts "latex"
     eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
@@ -91,28 +96,52 @@ makePdf opts pd = do
             throwError $ err500 {errBody = "Unable to make PDF:\n" <> err}
         Right bs -> pure bs
 
-makeEpub :: WriterOptions -> Pandoc -> Handler LB.ByteString
+makeEpub :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
 makeEpub opts pd = do
     wOpts <- figureOutTemplateFor opts "epub"
     liftIO $ writeEPUB wOpts pd
 
-figureOutTemplateFor :: WriterOptions -> String -> Handler WriterOptions
+figureOutTemplateFor :: ServiceWriterOptions -> String -> Handler WriterOptions
 figureOutTemplateFor wopts kind = do
     mtempl <-
-        case writerTemplate wopts of
-            Nothing -> do
-                eet <- liftIO $ getDefaultTemplate Nothing kind
-                case eet of
-                    Left err ->
-                        throwError $
-                        err500
-                        { errBody =
-                              mconcat
-                                  [ "Unable to find defaulte template for: "
-                                  , LB8.pack kind
-                                  , "\n" <> LB8.pack (show err)
-                                  ]
-                        }
-                    Right t -> pure $ Just t
+        case writerTemplate $ pandocWriterOptions wopts of
+            Nothing ->
+                case namedTemplate wopts of
+                    Nothing -> do
+                        eet <- liftIO $ getDefaultTemplate Nothing kind
+                        case eet of
+                            Left err ->
+                                throwError $
+                                err500
+                                { errBody =
+                                      mconcat
+                                          [ "Unable to find defaulte template for: "
+                                          , LB8.pack kind
+                                          , "\n" <> LB8.pack (show err)
+                                          ]
+                                }
+                            Right t -> pure $ Just t
+                    Just templateName -> Just <$> getNamedTemplate templateName
             mt -> pure mt
-    pure wopts {writerTemplate = mtempl}
+    pure $ (pandocWriterOptions wopts) {writerTemplate = mtempl}
+
+templateDir :: FilePath
+templateDir = "templates"
+
+getNamedTemplate :: String -> Handler String
+getNamedTemplate name = do
+    dirContents <-
+        liftIO $
+        (listDirectory templateDir) `catch`
+        (\e ->
+             if isDoesNotExistError e
+                 then pure []
+                 else throwIO e)
+    case find (== name) dirContents of
+        Nothing ->
+            throwError $
+            err404
+            { errBody =
+                  mconcat ["Named template '", LB8.pack name, "' not found."]
+            }
+        Just templfn -> liftIO $ readFile $ templateDir </> templfn

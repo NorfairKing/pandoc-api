@@ -3,6 +3,8 @@ module Pandoc.ServiceSpec where
 import Control.Concurrent
 import Control.Monad
 import Pandoc.Service
+import System.Directory
+import System.FilePath
 import Test.Hspec
 
 import Network.HTTP
@@ -89,6 +91,32 @@ spec = do
                 shouldJustWork $
                     "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": { \"variables\": [ [ \"toc\", \"true\" ] ] } }, \"content\": " ++
                     content ++ "}"
+            it "uses a named template if we tell it to" $ do
+                let content = "\"# Title\nContent\n\""
+                let templates =
+                        [ ( "hitemplate"
+                          , "\\documentclass{article}\n\\begin{document}\nhi\n\\end{document}\n")
+                        ]
+                shouldWorkWithTemplates templates $
+                    "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": { \"named-template\":\"hitemplate\" } }, \"content\": " ++
+                    content ++ "}"
+            it "returns a 404 on named template not found" $ do
+                irr <-
+                    simpleHTTP $
+                    postRequestWithBody
+                        "http://127.0.0.1:8081/convert"
+                        "application/json"
+                        "{ \"from\": \"markdown\", \"to\": \"pdf\", \"options\": { \"writer\": { \"named-template\":\"empty-template\" } }, \"content\": \"# Title\nContent\n\"}"
+                resp <- getRes irr
+                rspCode resp `shouldBe` (4, 0, 4)
+
+shouldWorkWithTemplates :: [(String, String)] -> String -> IO ()
+shouldWorkWithTemplates templates request = do
+    createDirectoryIfMissing True templateDir
+    forM_ templates $ \(name, content) -> do
+        let templateFile = templateDir </> name
+        writeFile templateFile content
+    shouldJustWork request
 
 shouldJustWork :: String -> IO ()
 shouldJustWork request = do
@@ -114,6 +142,7 @@ withService func = do
     func
     killThread tid
     void $ takeMVar var
+    removePathForcibly templateDir
 
 forkThing :: IO () -> IO (ThreadId, MVar ())
 forkThing proc = do

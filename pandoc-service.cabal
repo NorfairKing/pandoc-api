@@ -25,15 +25,17 @@ library
     , aeson >= 0.11 && < 0.12
     , bytestring >= 0.10 && < 0.11
     , containers >= 0.5 && < 0.6
+    , directory >= 1.2.7 && < 1.3
+    , filepath >= 1.4 && < 1.5
+    , microlens >= 0.4 && < 0.5
+    , microlens-th >= 0.4 && < 0.5
     , pandoc >= 1.19 && < 1.20
     , servant >= 0.8 && < 0.10
     , servant-server >= 0.8 && < 0.10
+    , template-haskell >= 2.11 && < 2.12
     , text >= 1.2 && < 1.3
     , wai >= 3.2 && < 3.3
     , warp >= 3.2 && < 3.3
-    , microlens >= 0.4 && < 0.5
-    , microlens-th >= 0.4 && < 0.5
-    , template-haskell >= 2.11 && < 2.12
   default-language:    Haskell2010
   ghc-options:        
     -Wall
@@ -59,9 +61,11 @@ test-suite pandoc-service-test
     Pandoc.ServiceSpec
   build-depends:       
       base
-    , pandoc-service
-    , hspec >= 2.2 && < 2.3
     , HTTP >= 4000.3 && < 4000.4
+    , directory
+    , filepath
+    , hspec >= 2.2 && < 2.3
+    , pandoc-service
   default-language:    Haskell2010
   ghc-options:         
     -threaded
