@@ -8,6 +8,7 @@ import Control.Monad.IO.Class
 import Data.List (find)
 import Data.Maybe
 
+import Control.Arrow (left)
 import Control.Exception (catch, throwIO)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LB
@@ -18,6 +19,7 @@ import Network.Wai
 import Network.Wai.Handler.Warp
 import Servant hiding (Header)
 import System.Directory
+import System.Exit (ExitCode(..))
 import System.FilePath
 import System.IO.Error (isDoesNotExistError)
 import Text.Pandoc
@@ -114,7 +116,22 @@ figureOutTemplateFor wopts kind = do
             Nothing ->
                 case namedTemplate wopts of
                     Nothing -> do
-                        eet <- liftIO $ getDefaultTemplate Nothing kind
+                        eet <-
+                            liftIO $
+                            (left show <$>
+                             getDefaultTemplate (Just ".") kind) `catch`
+                            -- Ad-hoc handling of pandoc's ExitFailure's.
+                            (\e ->
+                                 case e of
+                                     ExitFailure 97 ->
+                                         pure $
+                                         Left $
+                                         unwords
+                                             [ "Pandoc was unable to find a default template for"
+                                             , kind ++ ":"
+                                             , show e
+                                             ]
+                                     _ -> throwIO e)
                         case eet of
                             Left err ->
                                 throwError $
@@ -123,7 +140,7 @@ figureOutTemplateFor wopts kind = do
                                       mconcat
                                           [ "Unable to find defaulte template for: "
                                           , LB8.pack kind
-                                          , "\n" <> LB8.pack (show err)
+                                          , "\n" <> LB8.pack err
                                           ]
                                 }
                             Right t -> pure $ Just t
