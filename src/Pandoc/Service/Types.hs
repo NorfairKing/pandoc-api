@@ -40,11 +40,13 @@ instance FromJSON FromFormat where
 data ToFormat
     = ToPdf
     | ToEpub
+    | ToJSON
     deriving (Show, Eq)
 
 instance FromJSON ToFormat where
     parseJSON (String "pdf") = pure ToPdf
     parseJSON (String "epub") = pure ToEpub
+    parseJSON (String "json") = pure ToJSON
     parseJSON c = fail $ "Unknown 'to' format: " ++ show c
 
 data ConvertOptions = ConvertOptions

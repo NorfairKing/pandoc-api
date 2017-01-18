@@ -85,6 +85,7 @@ makeResult cr pd =
             case convertTo cr of
                 ToPdf -> makePdf
                 ToEpub -> makeEpub
+                ToJSON -> makeJSON
     in func wOpts pd
 
 makePdf :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
@@ -100,6 +101,11 @@ makeEpub :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
 makeEpub opts pd = do
     wOpts <- figureOutTemplateFor opts "epub"
     liftIO $ writeEPUB wOpts pd
+
+makeJSON :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
+makeJSON opts pd = do
+    wOpts <- figureOutTemplateFor opts "json"
+    pure $ LB8.pack $ writeJSON wOpts pd
 
 figureOutTemplateFor :: ServiceWriterOptions -> String -> Handler WriterOptions
 figureOutTemplateFor wopts kind = do

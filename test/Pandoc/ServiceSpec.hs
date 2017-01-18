@@ -48,6 +48,11 @@ spec = do
                 shouldJustWork $
                     "{ \"from\": \"markdown\", \"to\": \"epub\", \"content\": " ++
                     content ++ "}"
+            it "returns 200 upon a valid input markdown when converting to json" $ do
+                let content = "\"# Title\nContent\n\""
+                shouldJustWork $
+                    "{ \"from\": \"markdown\", \"to\": \"json\", \"content\": " ++
+                    content ++ "}"
             it "returns 200 upon a valid input json when converting to epub" $ do
                 let content =
                         "{\"meta\":{}, \"blocks\": [{\"t\":\"Plain\",\"c\":[{\"t\":\"Str\",\"c\":\"Hello\"}]}], \"pandoc-api-version\":[1,17,0,4] }"
