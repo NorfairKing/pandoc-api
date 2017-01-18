@@ -22,6 +22,7 @@ import System.Directory
 import System.Exit (ExitCode(..))
 import System.FilePath
 import System.IO.Error (isDoesNotExistError)
+import System.Process (system)
 import Text.Pandoc
 import Text.Pandoc.PDF
 
@@ -92,6 +93,21 @@ makeResult cr pd =
 
 makePdf :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
 makePdf opts pd = do
+    let pdfLatexVersionCmd = "pdflatex --version"
+    ec <- liftIO $ system pdfLatexVersionCmd
+    case ec of
+        ExitSuccess -> pure ()
+        ExitFailure c ->
+            throwError $
+            err500
+            { errBody =
+                  LB8.unwords
+                      [ LB8.pack pdfLatexVersionCmd
+                      , "failed with exit code"
+                      , LB8.pack $ show c
+                      , "unable to perform latex -> pdf conversion"
+                      ]
+            }
     wOpts <- figureOutTemplateFor opts "latex"
     eepdf <- liftIO $ makePDF "pdflatex" writeLaTeX wOpts pd
     case eepdf of
@@ -118,8 +134,7 @@ figureOutTemplateFor wopts kind = do
                     Nothing -> do
                         eet <-
                             liftIO $
-                            (left show <$>
-                             getDefaultTemplate (Just ".") kind) `catch`
+                            (left show <$> getDefaultTemplate (Just ".") kind) `catch`
                             -- Ad-hoc handling of pandoc's ExitFailure's.
                             (\e ->
                                  case e of
