@@ -27,10 +27,13 @@ import Text.Pandoc
 import Text.Pandoc.PDF
 
 import Pandoc.Service.API
+import Pandoc.Service.OptParse
 import Pandoc.Service.Types
 
 runPandocService :: IO ()
-runPandocService = run 8081 pandocApp
+runPandocService = do
+    sets <- getSettings
+    run (setsPort sets) pandocApp
 
 pandocApp :: Application
 pandocApp = serve apiProxy pandocServer
@@ -108,10 +111,9 @@ makePdf opts pd = do
                             , "failed with exit code"
                             , LB8.pack $ show c
                             ]
-                      ,  "unable to perform latex -> pdf conversion"
-                        , LB8.pack sout
-                        , LB8.pack serr
-
+                      , "unable to perform latex -> pdf conversion"
+                      , LB8.pack sout
+                      , LB8.pack serr
                       ]
             }
     wOpts <- figureOutTemplateFor opts "latex"
