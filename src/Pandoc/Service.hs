@@ -22,7 +22,7 @@ import System.Directory
 import System.Exit (ExitCode(..))
 import System.FilePath
 import System.IO.Error (isDoesNotExistError)
-import System.Process (system)
+import System.Process (readCreateProcessWithExitCode, shell)
 import Text.Pandoc
 import Text.Pandoc.PDF
 
@@ -94,18 +94,24 @@ makeResult cr pd =
 makePdf :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
 makePdf opts pd = do
     let pdfLatexVersionCmd = "pdflatex --version"
-    ec <- liftIO $ system pdfLatexVersionCmd
+    (ec, sout, serr) <-
+        liftIO $ readCreateProcessWithExitCode (shell pdfLatexVersionCmd) ""
     case ec of
         ExitSuccess -> pure ()
         ExitFailure c ->
             throwError $
             err500
             { errBody =
-                  LB8.unwords
-                      [ LB8.pack pdfLatexVersionCmd
-                      , "failed with exit code"
-                      , LB8.pack $ show c
-                      , "unable to perform latex -> pdf conversion"
+                  LB8.unlines
+                      [ LB8.unwords
+                            [ LB8.pack pdfLatexVersionCmd
+                            , "failed with exit code"
+                            , LB8.pack $ show c
+                            ]
+                      ,  "unable to perform latex -> pdf conversion"
+                        , LB8.pack sout
+                        , LB8.pack serr
+
                       ]
             }
     wOpts <- figureOutTemplateFor opts "latex"
