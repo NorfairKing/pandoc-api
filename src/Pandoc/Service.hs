@@ -10,13 +10,14 @@ import Data.Maybe
 
 import Control.Arrow (left)
 import Control.Exception (catch, throwIO)
+import Control.Monad.Reader
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Lazy.Char8 as LB8
 import Data.Monoid
 import qualified Data.Text as T
 import Network.Wai
-import Network.Wai.Handler.Warp
+import Network.Wai.Handler.Warp (run)
 import Servant hiding (Header)
 import System.Directory
 import System.Exit (ExitCode(..))
@@ -33,21 +34,23 @@ import Pandoc.Service.Types
 runPandocService :: IO ()
 runPandocService = do
     sets <- getSettings
-    run (setsPort sets) pandocApp
+    run (setsPort sets) (pandocApp sets)
 
-pandocApp :: Application
-pandocApp = serve apiProxy pandocServer
+pandocApp :: Settings -> Application
+pandocApp = serve apiProxy . pandocServer
 
 apiProxy :: Proxy PandocAPI
 apiProxy = Proxy
 
-pandocServer :: Server PandocAPI
+pandocServer :: Settings -> Server PandocAPI
 pandocServer = serveConvert
 
-serveConvert :: ConvertRequest -> Handler LB.ByteString
-serveConvert cr = getPandoc cr >>= makeResult cr
+serveConvert :: Settings -> ConvertRequest -> Handler LB.ByteString
+serveConvert sets cr = flip runReaderT sets $ getPandoc cr >>= makeResult cr
 
-getPandoc :: ConvertRequest -> Handler Pandoc
+type PHandler = ReaderT Settings Handler
+
+getPandoc :: ConvertRequest -> PHandler Pandoc
 getPandoc cr =
     ($ convertContent cr) $
     case convertFrom cr of
@@ -57,7 +60,7 @@ getPandoc cr =
                 (fromMaybe myDefaultReaderOptions $
                  readerOptions =<< convertOptions cr)
 
-getPandocFromJSON :: Value -> Handler Pandoc
+getPandocFromJSON :: Value -> PHandler Pandoc
 getPandocFromJSON c =
     case fromJSON c of
         Error err ->
@@ -65,7 +68,7 @@ getPandocFromJSON c =
             err400 {errBody = "Invalid json input: " <> LB8.pack err}
         Success pd -> return pd
 
-getPandocFromMarkdown :: ReaderOptions -> Value -> Handler Pandoc
+getPandocFromMarkdown :: ReaderOptions -> Value -> PHandler Pandoc
 getPandocFromMarkdown rOpts c =
     case c of
         String s ->
@@ -82,7 +85,7 @@ getPandocFromMarkdown rOpts c =
             err400
             {errBody = "Invalid md format in JSON (expecting just a String)."}
 
-makeResult :: ConvertRequest -> Pandoc -> Handler LB.ByteString
+makeResult :: ConvertRequest -> Pandoc -> PHandler LB.ByteString
 makeResult cr pd =
     let wOpts =
             (fromMaybe myDefaultServiceWriterOptions $
@@ -94,7 +97,7 @@ makeResult cr pd =
                 ToJSON -> makeJSON
     in func wOpts pd
 
-makePdf :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
+makePdf :: ServiceWriterOptions -> Pandoc -> PHandler LB.ByteString
 makePdf opts pd = do
     let pdfLatexVersionCmd = "pdflatex --version"
     (ec, sout, serr) <-
@@ -123,26 +126,27 @@ makePdf opts pd = do
             throwError $ err500 {errBody = "Unable to make PDF:\n" <> err}
         Right bs -> pure bs
 
-makeEpub :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
+makeEpub :: ServiceWriterOptions -> Pandoc -> PHandler LB.ByteString
 makeEpub opts pd = do
     wOpts <- figureOutTemplateFor opts "epub"
     liftIO $ writeEPUB wOpts pd
 
-makeJSON :: ServiceWriterOptions -> Pandoc -> Handler LB.ByteString
+makeJSON :: ServiceWriterOptions -> Pandoc -> PHandler LB.ByteString
 makeJSON opts pd = do
     wOpts <- figureOutTemplateFor opts "json"
     pure $ LB8.pack $ writeJSON wOpts pd
 
-figureOutTemplateFor :: ServiceWriterOptions -> String -> Handler WriterOptions
+figureOutTemplateFor :: ServiceWriterOptions -> String -> PHandler WriterOptions
 figureOutTemplateFor wopts kind = do
     mtempl <-
         case writerTemplate $ pandocWriterOptions wopts of
             Nothing ->
                 case namedTemplate wopts of
                     Nothing -> do
+                        dd <- getDataDir
                         eet <-
                             liftIO $
-                            (left show <$> getDefaultTemplate (Just ".") kind) `catch`
+                            (left show <$> getDefaultTemplate (Just dd) kind) `catch`
                             -- Ad-hoc handling of pandoc's ExitFailure's.
                             (\e ->
                                  case e of
@@ -174,11 +178,15 @@ figureOutTemplateFor wopts kind = do
 templateDir :: FilePath
 templateDir = "templates"
 
-getNamedTemplate :: String -> Handler String
+getDataDir :: PHandler FilePath
+getDataDir = asks setsDataDir
+
+getNamedTemplate :: String -> PHandler String
 getNamedTemplate name = do
+    dd <- getDataDir
     dirContents <-
         liftIO $
-        (listDirectory templateDir) `catch`
+        (listDirectory $ dd </> templateDir) `catch`
         (\e ->
              if isDoesNotExistError e
                  then pure []

@@ -4,6 +4,7 @@ import Options.Applicative
 
 data Settings = Settings
     { setsPort :: Int
+    , setsDataDir :: FilePath
     } deriving (Show, Eq)
 
 getSettings :: IO Settings
@@ -19,4 +20,19 @@ settingsParser =
     option
         auto
         (mconcat
-             [long "port", short 'p', metavar "PORT", value 8081, showDefault, help "The port to run the service on"])
+             [ long "port"
+             , short 'p'
+             , metavar "PORT"
+             , value 8081
+             , showDefault
+             , help "The port to run the service on"
+             ]) <*>
+    strOption
+        (mconcat
+             [ long "data-dir"
+             , short 't'
+             , metavar "DIRECTORY"
+             , value "."
+             , showDefault
+             , help "The directory to look for templates in"
+             ])
