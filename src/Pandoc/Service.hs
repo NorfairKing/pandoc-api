@@ -6,7 +6,6 @@ module Pandoc.Service where
 
 import Control.Monad.IO.Class
 import Data.List (find)
-import Data.Maybe
 
 import Control.Arrow (left)
 import Control.Exception (catch, throwIO)
@@ -56,9 +55,7 @@ getPandoc cr =
     case convertFrom cr of
         FromJson -> getPandocFromJSON
         FromMarkdown ->
-            getPandocFromMarkdown
-                (fromMaybe myDefaultReaderOptions $
-                 readerOptions =<< convertOptions cr)
+            getPandocFromMarkdown $ readerOptions $ convertOptions cr
 
 getPandocFromJSON :: Value -> PHandler Pandoc
 getPandocFromJSON c =
@@ -87,9 +84,7 @@ getPandocFromMarkdown rOpts c =
 
 makeResult :: ConvertRequest -> Pandoc -> PHandler LB.ByteString
 makeResult cr pd =
-    let wOpts =
-            (fromMaybe myDefaultServiceWriterOptions $
-             writerOptions =<< convertOptions cr)
+    let wOpts = writerOptions $ convertOptions cr
         func =
             case convertTo cr of
                 ToPdf -> makePdf
