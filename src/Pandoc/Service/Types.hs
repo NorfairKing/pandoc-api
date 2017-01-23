@@ -80,6 +80,7 @@ instance FromJSON ConvertOptions where
         pure $ ConvertOptions ros wos
     parseJSON _ = fail $ "ConvertOptions should be specified in an 'Object'."
 
+-- | Edit the default 'ReaderOptions' by looking at the contents of the given 'Object'.
 defaultDeltaReaderOptions :: Object -> Parser ReaderOptions
 defaultDeltaReaderOptions o =
     def &
@@ -119,6 +120,7 @@ instance FromJSON ServiceWriterOptions where
     parseJSON _ =
         fail $ "ServiceWriterOptions should be specified in an 'Object'."
 
+-- | Edit the default 'WriterOptions' by looking at the contents of the given 'Object'.
 defaultDeltaWriterOptions :: Object -> Parser WriterOptions
 defaultDeltaWriterOptions o =
     def &
@@ -178,6 +180,7 @@ defaultDeltaWriterOptions o =
      editWhileParsing o "latexArgs" writerLaTeXArgsL)
     -- TODO add writerReferenceLocationL
 
+-- | Edit a value using a lens by parsing at a given label from a given 'Object'.
 editWhileParsing
     :: FromJSON a
     => Object -> Text -> Lens' o a -> o -> Parser o
