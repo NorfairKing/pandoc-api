@@ -8,4 +8,8 @@ extra-deps:
 - pandoc-types-1.17.0.4
 - texmath-0.9
 - directory-1.2.7.1
-resolver: lts-7.14
+- hsb2hs-0.3.1
+flags:
+  pandoc:
+    embed_data_files: true
+resolver: lts-7.16
